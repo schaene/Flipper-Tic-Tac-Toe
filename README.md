@@ -1,4 +1,6 @@
-# Flipper-Tic-Tac-Toe
-Tic Tac Toe for the Flipper
+# Flipper-DVD-Bounce
+**simple dvd-bounce application for flipper**
 
-if you ended up here on accident, sorry, this is far from complete
+Y'know how dvd players got that thing that bounces around?
+
+*This is that*

@@ -1,0 +1,15 @@
+# qv. https://github.com/flipperdevices/flipperzero-firmware/blob/dev/documentation/AppManifests.md
+
+App(
+    appid="tictactoe",
+    name="Tic-Tac-Toe",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="stuff",
+    requires=[
+        "gui",
+    ],
+    stack_size=1 * 1024,
+    fap_icon="iconimage.png",
+    fap_category="",
+    fap_icon_assets="assets",
+)
