@@ -1,6 +1,6 @@
-# Flipper-DVD-Bounce
-**simple dvd-bounce application for flipper**
+# Flipper-Tic-Tac-Toe
+**Tic-Tac-Toe for the Flipper Zero**
 
-Y'know how dvd players got that thing that bounces around?
+this is very unfinished, there isnt even tic tac toe yet
 
-*This is that*
+*just got the menus*
