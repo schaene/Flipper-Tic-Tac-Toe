@@ -5,66 +5,168 @@
 #include <input/input.h>
 #include "tictactoe_icons.h"
 
+enum current_screen {
+    TitleScreen,
+    SettingsScreen,
+    GameScreen,
+};
+
 //the determines what should be drawn to the screen
-int current_screen = 0;
-int blink_counter = 0;
-bool blink = true;
-bool multiplayer = true;
+static int current_screen = TitleScreen;
+static int blink_counter = 0;
+static bool blink = true;
+static bool multiplayer = true;
 
 //bools for which mode is being played
-bool subghzmulti = false;
-bool gpiomulti = false;
-bool localmulti = false;
-bool commulti = false;
+static bool subghzmulti = false;
+static bool gpiomulti = false;
+static bool localmulti = false;
+static bool commulti = false;
 
 //game variables
-int player_turn = 1;
-int current_highlighted = 0;
-char board[9] = {'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y'};
+static int player_turn = 1;
+static int current_highlighted = 0;
+static char board[9] = {'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y'};
 
 #define X_BASE 64
 #define Y_BASE 17
 #define X_OFF 20
 #define Y_OFF 20
 //iterative out here just for the sake of not being in there.
-int i = 0;
+static int i = 0;
 
 //determines is board is full
-bool isboardfull = false;
+static bool isboardfull = false;
 
 //determines if theres a winner
-int winner = 0;
+static int winner = 0;
 
-int initial_launch = true;
+static int initial_launch = true;
 void defaults() {
     //sets every single global variable back to default
-    static int current_screen = 0;
+    current_screen = TitleScreen;
 
-    static int blink_counter = 0;
+    blink_counter = 0;
 
-    static bool blink = true;
+    blink = true;
 
-    static bool multiplayer = true;
+    multiplayer = true;
 
-    static bool subghzmulti = false;
+    subghzmulti = false;
 
-    static bool gpiomulti = false;
+    gpiomulti = false;
 
-    static bool localmulti = false;
+    localmulti = false;
 
-    static bool commulti = false;
+    commulti = false;
 
-    static int player_turn = 1;
+    player_turn = 1;
 
-    static int current_highlighted = 0;
+    current_highlighted = 0;
 
     for(int i = 0; i < 9; i++) {
         board[i] = 'y';
     }
 
-    static bool isboardfull = false;
+    isboardfull = false;
 
-    static int winner = 0;
+    winner = 0;
+}
+
+static void draw_title(Canvas* canvas) {
+    canvas_draw_icon(canvas, 0, 0, &I_TitleScreen_128x64);
+    //flashing play button go brrrr
+    if(blink) {
+        if(blink_counter == 10) {
+            blink = false;
+            blink_counter = 0;
+        }
+        blink_counter += 1;
+        canvas_set_font(canvas, FontPrimary);
+        canvas_draw_str(canvas, 4, 59, "Play");
+    } else {
+        blink_counter += 1;
+        if(blink_counter == 10) {
+            blink = true;
+            blink_counter = 0;
+        }
+    }
+}
+
+static void draw_settings(Canvas* canvas) {
+    canvas_set_font(canvas, FontPrimary);
+    canvas_draw_str(canvas, 2, 10, "Game Settings");
+
+    canvas_set_font(canvas, FontSecondary);
+    canvas_draw_str(canvas, 48, 32, "Multiplayer Mode");
+
+    canvas_set_font(canvas, FontSecondary);
+    canvas_draw_str(canvas, 48, 47, "Singleplayer Mode");
+    if(multiplayer) {
+        canvas_draw_frame(canvas, 46, 22, 82, 14);
+        canvas_draw_icon(canvas, 0, 22, &I_WarningDolphinee_45x42);
+    } else {
+        canvas_draw_frame(canvas, 46, 36, 82, 15);
+        canvas_draw_icon(canvas, 0, 22, &I_WarningDolphin_45x42);
+    }
+}
+
+static void draw_game(Canvas* canvas) {
+    if(winner == 0) {
+        canvas_set_font(canvas, FontSecondary);
+        canvas_draw_str(canvas, 3, 10, "Player 1");
+        canvas_draw_str(canvas, 3, 19, furi_hal_version_get_name_ptr());
+        canvas_draw_str(canvas, 3, 61, "Computer");
+        canvas_draw_str(canvas, 3, 52, "Player 2");
+
+        if(player_turn == 1) {
+            canvas_draw_frame(canvas, 0, 0, 48, 23);
+        } else {
+            canvas_draw_frame(canvas, 0, 41, 48, 23);
+            canvas_set_font(canvas, FontSecondary);
+            canvas_draw_str(canvas, 3, 36, "Waiting...");
+        }
+    } else if(winner == 1) {
+        canvas_set_font(canvas, FontPrimary);
+        if(player_turn == 1) {
+            canvas_draw_str(canvas, 3, 30, furi_hal_version_get_name_ptr());
+        } else {
+            canvas_draw_str(canvas, 3, 30, "Computer");
+        }
+        canvas_draw_str(canvas, 3, 40, "Wins!");
+    } else if(winner == 2) {
+        canvas_set_font(canvas, FontPrimary);
+        canvas_draw_str(canvas, 3, 30, "Draw!");
+    }
+
+    canvas_draw_icon(canvas, 55, 0, &I_GameBoard_64x64);
+    //draws the selector if its the players turn and the game is ongoing
+    if(player_turn == 1 && winner == 0) {
+        canvas_draw_icon(
+            canvas,
+            (X_BASE + ((current_highlighted % 3) * X_OFF) - 4),
+            (Y_BASE + ((current_highlighted / 3) * Y_OFF) - 12),
+            &I_Select_15x15);
+    }
+    //draws the current x's and o's
+    while(i != 9) {
+        if(board[i] == 'x') {
+            canvas_set_font(canvas, FontPrimary);
+            canvas_draw_str(
+                canvas, (X_BASE + ((i % 3) * X_OFF)), (Y_BASE + ((i / 3) * Y_OFF)), "X");
+        }
+        i += 1;
+    }
+    i = 0;
+    while(i != 9) {
+        if(board[i] == 'o') {
+            canvas_set_font(canvas, FontPrimary);
+            canvas_draw_str(
+                canvas, (X_BASE + ((i % 3) * X_OFF)), (Y_BASE + ((i / 3) * Y_OFF)), "O");
+        }
+        i += 1;
+    }
+    i = 0;
 }
 
 //the thing to draw to the screen
@@ -72,106 +174,12 @@ static void app_draw_callback(Canvas* canvas, void* ctx) {
     UNUSED(ctx);
     canvas_clear(canvas);
 
-    //draws the title screen
-    if(current_screen == 0) {
-        canvas_draw_icon(canvas, 0, 0, &I_TitleScreen_128x64);
-        //flashing play button go brrrr
-        if(blink) {
-            if(blink_counter == 10) {
-                blink = false;
-                blink_counter = 0;
-            }
-            blink_counter += 1;
-            canvas_set_font(canvas, FontPrimary);
-            canvas_draw_str(canvas, 4, 59, "Play");
-        } else {
-            blink_counter += 1;
-            if(blink_counter == 10) {
-                blink = true;
-                blink_counter = 0;
-            }
-        }
-        //settings screen 1, multiplayer/singleplayer
-    } else if(current_screen == 1) {
-        canvas_set_font(canvas, FontPrimary);
-        canvas_draw_str(canvas, 2, 10, "Game Settings");
-
-        canvas_set_font(canvas, FontSecondary);
-        canvas_draw_str(canvas, 48, 32, "Multiplayer Mode");
-
-        canvas_set_font(canvas, FontSecondary);
-        canvas_draw_str(canvas, 48, 47, "Singleplayer Mode");
-        if(multiplayer) {
-            canvas_draw_frame(canvas, 46, 22, 82, 14);
-            canvas_draw_icon(canvas, 0, 22, &I_WarningDolphinee_45x42);
-        } else {
-            canvas_draw_frame(canvas, 46, 36, 82, 15);
-            canvas_draw_icon(canvas, 0, 22, &I_WarningDolphin_45x42);
-        }
-    }
-    //draw game screen
-    else if(current_screen == 2) {
-        if(winner == 0) {
-            canvas_set_font(canvas, FontSecondary);
-            canvas_draw_str(canvas, 3, 10, "Player 1");
-            canvas_draw_str(canvas, 3, 19, furi_hal_version_get_name_ptr());
-            canvas_draw_str(canvas, 3, 61, "Guest");
-            canvas_draw_str(canvas, 3, 52, "Player 2");
-
-            if(player_turn == 1) {
-                canvas_draw_frame(canvas, 0, 0, 43, 23);
-            } else {
-                canvas_draw_frame(canvas, 0, 41, 43, 23);
-            }
-        } else if(winner == 1) {
-            canvas_set_font(canvas, FontPrimary);
-            canvas_draw_str(canvas, 3, 30, "Drihanit");
-            canvas_draw_str(canvas, 3, 40, "Wins!");
-        } else if(winner == 2) {
-            canvas_set_font(canvas, FontPrimary);
-            canvas_draw_str(canvas, 3, 30, "Draw!");
-        }
-
-        canvas_draw_icon(canvas, 55, 0, &I_GameBoard_64x64);
-        //draws the selector if its the players turn and the game is ongoing
-        if(player_turn == 1 && winner == 0) {
-            canvas_draw_icon(
-                canvas,
-                (X_BASE + ((current_highlighted % 3) * X_OFF) - 4),
-                (Y_BASE + ((current_highlighted / 3) * Y_OFF) - 12),
-                &I_Select_15x15);
-        }
-        //draws the current x's and o's
-        while(i != 9) {
-            if(board[i] == 'x') {
-                canvas_set_font(canvas, FontPrimary);
-                canvas_draw_str(
-                    canvas, (X_BASE + ((i % 3) * X_OFF)), (Y_BASE + ((i / 3) * Y_OFF)), "X");
-            }
-            i += 1;
-        }
-        i = 0;
-        while(i != 9) {
-            if(board[i] == 'o') {
-                canvas_set_font(canvas, FontPrimary);
-                canvas_draw_str(
-                    canvas, (X_BASE + ((i % 3) * X_OFF)), (Y_BASE + ((i / 3) * Y_OFF)), "O");
-            }
-            i += 1;
-        }
-        i = 0;
-    }
-}
-//grabs opponents moves from wherever they are coming from
-void opponent_move() {
-    if(commulti) {
-        int oppMove = (rand() % 9);
-
-        while((board[oppMove] == 'x') || (board[oppMove] == 'o')) {
-            oppMove = (rand() % 9);
-        }
-        board[oppMove] = 'o';
-        player_turn = 1;
+    if(current_screen == TitleScreen) {
+        draw_title(canvas);
+    } else if(current_screen == SettingsScreen) {
+        draw_settings(canvas);
+    } else if(current_screen == GameScreen) {
+        draw_game(canvas);
     }
 }
 
@@ -200,6 +208,21 @@ void check_if_winner() {
     if(winner != 0) {
         furi_delay_ms(2000);
         defaults();
+    }
+}
+
+//grabs opponents moves from wherever they are coming from
+void opponent_move() {
+    if(commulti) {
+        int oppMove = (rand() % 9);
+
+        while((board[oppMove] == 'x') || (board[oppMove] == 'o')) {
+            oppMove = (rand() % 9);
+        }
+        furi_delay_ms(700);
+        board[oppMove] = 'o';
+        check_if_winner();
+        player_turn = 1;
     }
 }
 
@@ -234,12 +257,13 @@ int32_t stuff(void* p) {
         if(furi_message_queue_get(event_queue, &event, 100) == FuriStatusOk) {
             if((event.type == InputTypePress) || (event.type == InputTypeRepeat)) {
                 //title screen input
-                if(current_screen == 0) {
+                if(current_screen == TitleScreen) {
                     switch(event.key) {
                         //goes to the options menu when ok is pressed
                     case InputKeyOk:
                         //goes to next screen
-                        current_screen = 1;
+                        defaults();
+                        current_screen = SettingsScreen;
 
                         break;
                     //exits the program if back is pressed
@@ -251,19 +275,19 @@ int32_t stuff(void* p) {
                     }
                 }
                 //choosing if multiplayer or singleplayer
-                else if(current_screen == 1) {
+                else if(current_screen == SettingsScreen) {
                     switch(event.key) {
                     case InputKeyOk:
                         //goes to next screen
 
                         if(!multiplayer) {
-                            current_screen = 2;
+                            current_screen = GameScreen;
                             commulti = true;
                         }
                         break;
                     //goes back to title if back is pressed
                     case InputKeyBack:
-                        current_screen = 0;
+                        current_screen = TitleScreen;
                         break;
                     case InputKeyLeft:
                         break;
@@ -280,7 +304,7 @@ int32_t stuff(void* p) {
                     }
                 }
 
-                else if(current_screen == 2) {
+                else if(current_screen == GameScreen) {
                     //checks if the board is full
                     isboardfull = true;
                     for(int i = 0; i < 9; i++) {
@@ -299,6 +323,8 @@ int32_t stuff(void* p) {
                                 break;
                             } else {
                                 board[current_highlighted] = 'x';
+                                check_if_winner();
+
                                 player_turn = 2;
 
                                 isboardfull = true;
@@ -308,7 +334,7 @@ int32_t stuff(void* p) {
                                         break;
                                     }
                                 }
-                                if(!isboardfull) {
+                                if(!isboardfull && winner == 0) {
                                     opponent_move();
                                 }
                             }
@@ -317,7 +343,7 @@ int32_t stuff(void* p) {
                     //exits the program if back is pressed
                     case InputKeyBack:
 
-                        current_screen = 0;
+                        current_screen = TitleScreen;
                         break;
                     case InputKeyLeft:
                         if(current_highlighted == 0) {

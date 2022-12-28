@@ -1,6 +1,10 @@
 # Flipper-Tic-Tac-Toe
 **Tic-Tac-Toe for the Flipper Zero**
 
-this is very unfinished, there isnt even tic tac toe yet
+this is very unfinished, singleplayer against a bot with fully random moves is implemented. 
 
-*just got the menus*
+Planned:
+
+Local Multiplayer (same flipper)
+
+Sub-Ghz Multiplayer (Two Flippers)
