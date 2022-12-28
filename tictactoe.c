@@ -10,9 +10,66 @@ int current_screen = 0;
 int blink_counter = 0;
 bool blink = true;
 bool multiplayer = true;
-char mode_str[12];
+//used to disable input until scene changes, took 7 hours to realise i needed this
+bool changing_screen = false;
 
-bool title_done = false;
+//bools for which mode is being played
+bool subghzmulti = false;
+bool gpiomulti = false;
+bool localmulti = false;
+bool commulti = false;
+
+//game variables
+int player_turn = 1;
+int current_highlighted = 0;
+char board[9] = {'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y'};
+//starting locations
+int x_base = 64;
+int y_base = 17;
+//easier placing of x's and o's i hope
+int x_mult = 20;
+int y_mult = 20;
+//iterative out here just for the sake of not being in there.
+int i = 0;
+
+//determines is board is full
+bool isboardfull = false;
+
+//determines if theres a winner
+int winner = 0;
+
+int initial_launch = true;
+void defaults() {
+    //sets every single global variable back to default
+    current_screen = 0;
+    (void)current_screen;
+    blink_counter = 0;
+    (void)blink_counter;
+    blink = true;
+    (void)blink;
+    multiplayer = true;
+    (void)multiplayer;
+    changing_screen = false;
+    (void)changing_screen;
+    subghzmulti = false;
+    (void)subghzmulti;
+    gpiomulti = false;
+    (void)gpiomulti;
+    localmulti = false;
+    (void)localmulti;
+    commulti = false;
+    (void)commulti;
+    player_turn = 1;
+    (void)player_turn;
+    current_highlighted = 0;
+    (void)current_highlighted;
+    int board[9] = {'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y'};
+    (void)board[0];
+    isboardfull = false;
+    (void)isboardfull;
+    winner = 0;
+    (void)winner;
+}
 
 //the thing to draw to the screen
 static void app_draw_callback(Canvas* canvas, void* ctx) {
@@ -78,6 +135,98 @@ static void app_draw_callback(Canvas* canvas, void* ctx) {
             canvas_draw_icon(canvas, 0, 22, &I_WarningDolphin_45x42);
         }
     }
+    //draw game screen
+    if(current_screen == 2) {
+        if(winner == 0) {
+            canvas_set_font(canvas, FontSecondary);
+            canvas_draw_str(canvas, 3, 10, "Player 1");
+            canvas_draw_str(canvas, 3, 19, "Drihanit");
+            canvas_draw_str(canvas, 3, 61, "Guest");
+            canvas_draw_str(canvas, 3, 52, "Player 2");
+
+            if(player_turn == 1) {
+                canvas_draw_frame(canvas, 0, 0, 43, 23);
+            } else {
+                canvas_draw_frame(canvas, 0, 41, 43, 23);
+            }
+        } else if(winner == 1) {
+            canvas_set_font(canvas, FontPrimary);
+            canvas_draw_str(canvas, 3, 30, "Drihanit");
+            canvas_draw_str(canvas, 3, 40, "Wins!");
+        } else if(winner == 2) {
+            canvas_set_font(canvas, FontPrimary);
+            canvas_draw_str(canvas, 3, 30, "Draw!");
+        }
+
+        canvas_draw_icon(canvas, 55, 0, &I_GameBoard_64x64);
+        //draws the selector if its the players turn and the game is ongoing
+        if(player_turn == 1 && winner == 0) {
+            canvas_draw_icon(
+                canvas,
+                (x_base + ((current_highlighted % 3) * x_mult) - 4),
+                (y_base + ((current_highlighted / 3) * y_mult) - 12),
+                &I_Select_15x15);
+        }
+        //draws the current x's and o's
+        while(i != 9) {
+            if(board[i] == 'x') {
+                canvas_set_font(canvas, FontPrimary);
+                canvas_draw_str(
+                    canvas, (x_base + ((i % 3) * x_mult)), (y_base + ((i / 3) * y_mult)), "X");
+            }
+            i += 1;
+        }
+        i = 0;
+        while(i != 9) {
+            if(board[i] == 'o') {
+                canvas_set_font(canvas, FontPrimary);
+                canvas_draw_str(
+                    canvas, (x_base + ((i % 3) * x_mult)), (y_base + ((i / 3) * y_mult)), "O");
+            }
+            i += 1;
+        }
+        i = 0;
+    }
+}
+//grabs opponents moves from wherever they are coming from
+void opponent_move() {
+    if(commulti) {
+        int oppMove = (rand() % 9);
+
+        while((board[oppMove] == 'x') || (board[oppMove] == 'o')) {
+            oppMove = (rand() % 9);
+        }
+        board[oppMove] = 'o';
+        player_turn = 1;
+    }
+}
+
+//checks if someoen has won
+void check_if_winner() {
+    if(board[0] == board[1] && board[1] == board[2] && board[0] != 'y') {
+        winner = 1;
+    } else if(board[3] == board[4] && board[4] == board[5] && board[3] != 'y')
+        winner = 1;
+    else if(board[6] == board[7] && board[7] == board[8] && board[6] != 'y')
+        winner = 1;
+    else if(board[0] == board[4] && board[4] == board[8] && board[0] != 'y')
+        winner = 1;
+    else if(board[2] == board[4] && board[4] == board[6] && board[2] != 'y')
+        winner = 1;
+    else if(board[0] == board[3] && board[3] == board[6] && board[0] != 'y')
+        winner = 1;
+    else if(board[1] == board[4] && board[4] == board[7] && board[1] != 'y')
+        winner = 1;
+    else if(board[2] == board[5] && board[5] == board[8] && board[2] != 'y')
+        winner = 1;
+    else if(isboardfull) {
+        winner = 2;
+    }
+
+    if(winner != 0) {
+        furi_delay_ms(2000);
+        defaults();
+    }
 }
 
 static void app_input_callback(InputEvent* input_event, void* ctx) {
@@ -104,15 +253,20 @@ int32_t stuff(void* p) {
 
     bool running = true;
     while(running) {
+        if(initial_launch) {
+            defaults();
+            initial_launch = false;
+        }
         if(furi_message_queue_get(event_queue, &event, 100) == FuriStatusOk) {
             if((event.type == InputTypePress) || (event.type == InputTypeRepeat)) {
                 //title screen input
-                if(current_screen == 0) {
+                if((current_screen == 0) && (!changing_screen)) {
                     switch(event.key) {
                         //goes to the options menu when ok is pressed
                     case InputKeyOk:
                         //goes to next screen
-                        title_done = true;
+                        current_screen = 1;
+                        changing_screen = true;
                         break;
                     //exits the program if back is pressed
                     case InputKeyBack:
@@ -123,11 +277,16 @@ int32_t stuff(void* p) {
                     }
                 }
                 //choosing if multiplayer or singleplayer
-                if(current_screen == 1) {
+                if((current_screen == 1) && (!changing_screen)) {
                     switch(event.key) {
                     case InputKeyOk:
                         //goes to next screen
-                        current_screen = 0;
+
+                        if(!multiplayer) {
+                            current_screen = 2;
+                            commulti = true;
+                            changing_screen = true;
+                        }
                         break;
                     //goes back to title if back is pressed
                     case InputKeyBack:
@@ -147,12 +306,83 @@ int32_t stuff(void* p) {
                         break;
                     }
                 }
+
+                if((current_screen == 2) && (!changing_screen)) {
+                    //checks if the board is full
+                    isboardfull = true;
+                    for(int i = 0; i < 9; i++) {
+                        if(board[i] == 'y') {
+                            isboardfull = false;
+                            break;
+                        }
+                    }
+
+                    switch(event.key) {
+                        //goes to the options menu when ok is pressed
+                    case InputKeyOk:
+                        if(player_turn == 1 && winner == 0) {
+                            if((board[current_highlighted] == 'x') ||
+                               (board[current_highlighted] == 'o')) {
+                                break;
+                            } else {
+                                board[current_highlighted] = 'x';
+                                player_turn = 2;
+
+                                isboardfull = true;
+                                for(int i = 0; i < 9; i++) {
+                                    if(board[i] == 'y') {
+                                        isboardfull = false;
+                                        break;
+                                    }
+                                }
+                                if(!isboardfull) {
+                                    opponent_move();
+                                }
+                            }
+                        }
+                        break;
+                    //exits the program if back is pressed
+                    case InputKeyBack:
+
+                        current_screen = 0;
+                        break;
+                    case InputKeyLeft:
+                        if(current_highlighted == 0) {
+                            current_highlighted = 8;
+                        } else {
+                            current_highlighted -= 1;
+                        }
+                        break;
+                    case InputKeyRight:
+                        if(current_highlighted == 8) {
+                            current_highlighted = 0;
+                        } else {
+                            current_highlighted += 1;
+                        }
+                        break;
+                    case InputKeyUp:
+                        if(current_highlighted <= 2) {
+                            current_highlighted += 6;
+                        } else {
+                            current_highlighted -= 3;
+                        }
+                        break;
+                    case InputKeyDown:
+                        if(current_highlighted >= 6) {
+                            current_highlighted -= 6;
+                        } else {
+                            current_highlighted += 3;
+                        }
+                        break;
+                    default:
+                        break;
+                    }
+                }
             }
         }
-        if(title_done) {
-            current_screen = 1;
-            title_done = false;
-        }
+
+        changing_screen = false;
+        check_if_winner();
         view_port_update(view_port);
     }
     //cleanup go brrrrr
