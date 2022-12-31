@@ -25,6 +25,8 @@ static bool commulti = false;
 
 //game variables
 static int player_turn = 1;
+static int current_player = 1;
+
 static int current_highlighted = 0;
 static char board[9] = {'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y'};
 
@@ -45,6 +47,8 @@ static int initial_launch = true;
 void defaults() {
     //sets every single global variable back to default
     current_screen = TitleScreen;
+
+    current_player = 1;
 
     blink_counter = 0;
 
@@ -71,6 +75,19 @@ void defaults() {
     isboardfull = false;
 
     winner = 0;
+}
+
+//determines what the opponents name should be
+const char * get_opponents_name(){
+    if(commulti){
+        return "Computer";
+    }
+    else if (localmulti){
+        return "Guest";
+    }
+    else{
+        return "Missingno";
+    }
 }
 
 static void draw_title(Canvas* canvas) {
@@ -116,7 +133,7 @@ static void draw_game(Canvas* canvas) {
         canvas_set_font(canvas, FontSecondary);
         canvas_draw_str(canvas, 3, 10, "Player 1");
         canvas_draw_str(canvas, 3, 19, furi_hal_version_get_name_ptr());
-        canvas_draw_str(canvas, 3, 61, "Computer");
+        canvas_draw_str(canvas, 3, 61, get_opponents_name());
         canvas_draw_str(canvas, 3, 52, "Player 2");
 
         if(player_turn == 1) {
@@ -124,6 +141,9 @@ static void draw_game(Canvas* canvas) {
         } else {
             canvas_draw_frame(canvas, 0, 41, 48, 23);
             canvas_set_font(canvas, FontSecondary);
+            
+        }
+        if(player_turn != current_player){
             canvas_draw_str(canvas, 3, 36, "Waiting...");
         }
     } else if(winner == 1) {
@@ -131,7 +151,7 @@ static void draw_game(Canvas* canvas) {
         if(player_turn == 1) {
             canvas_draw_str(canvas, 3, 30, furi_hal_version_get_name_ptr());
         } else {
-            canvas_draw_str(canvas, 3, 30, "Computer");
+            canvas_draw_str(canvas, 3, 30, get_opponents_name());
         }
         canvas_draw_str(canvas, 3, 40, "Wins!");
     } else if(winner == 2) {
@@ -141,7 +161,7 @@ static void draw_game(Canvas* canvas) {
 
     canvas_draw_icon(canvas, 55, 0, &I_GameBoard_64x64);
     //draws the selector if its the players turn and the game is ongoing
-    if(player_turn == 1 && winner == 0) {
+    if(player_turn == current_player && winner == 0) {
         canvas_draw_icon(
             canvas,
             (X_BASE + ((current_highlighted % 3) * X_OFF) - 4),
@@ -211,6 +231,8 @@ void check_if_winner() {
     }
 }
 
+
+
 //grabs opponents moves from wherever they are coming from
 void opponent_move() {
     if(commulti) {
@@ -223,6 +245,15 @@ void opponent_move() {
         board[oppMove] = 'o';
         check_if_winner();
         player_turn = 1;
+    }
+    else if(localmulti){
+        if(current_player == 1){
+            current_player = 2;
+        }
+        else if(current_player == 2){
+            current_player = 1;
+        }
+        
     }
 }
 
@@ -284,6 +315,10 @@ int32_t stuff(void* p) {
                             current_screen = GameScreen;
                             commulti = true;
                         }
+                        else if(multiplayer){
+                            current_screen = GameScreen;
+                            localmulti = true;
+                        }
                         break;
                     //goes back to title if back is pressed
                     case InputKeyBack:
@@ -317,15 +352,25 @@ int32_t stuff(void* p) {
                     switch(event.key) {
                         //goes to the options menu when ok is pressed
                     case InputKeyOk:
-                        if(player_turn == 1 && winner == 0) {
+                        if(player_turn == current_player && winner == 0) {
                             if((board[current_highlighted] == 'x') ||
                                (board[current_highlighted] == 'o')) {
                                 break;
                             } else {
-                                board[current_highlighted] = 'x';
-                                check_if_winner();
+                                if(current_player == 1){
+                                    board[current_highlighted] = 'x';
+                                    check_if_winner();
+                                    player_turn = 2;
+                                }
+                                else if(current_player == 2){
+                                    board[current_highlighted] = 'o';
+                                    check_if_winner();
+                                    player_turn = 1;
+                                }
+                                
+                                
 
-                                player_turn = 2;
+                                
 
                                 isboardfull = true;
                                 for(int i = 0; i < 9; i++) {
